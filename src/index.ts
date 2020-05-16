@@ -1,10 +1,13 @@
 import * as THREE from "three";
 import { VRButton } from "three/examples/jsm/webxr/VRButton";
-import { VertexColors } from "three";
+import { GLTFLoader, GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { AnimationMixer, Group } from "three";
+import { OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 
 let camera: THREE.PerspectiveCamera;
 let scene: THREE.Scene;
 let renderer: THREE.WebGLRenderer;
+let mixer: AnimationMixer;
 
 let moveForward = false;
 let moveBackward = false;
@@ -27,12 +30,23 @@ function init() {
     camera.position.y = 10;
 
     scene = new THREE.Scene();
-    scene.background = new THREE.Color( 0xffffff );
+    // scene.background = new THREE.Color( 0xffffff );
+    scene.background = new THREE.Color().setHSL( 0.6, 0, 1 );
     scene.fog = new THREE.Fog( 0xffffff, 0, 750 );
 
-    let light = new THREE.HemisphereLight( 0xeeeeff, 0x777788, 0.75 );
-    light.position.set( 0.5, 1, 0.75 );
-    scene.add( light );
+    let dirLight = new THREE.DirectionalLight( 0xffffff, 1 );
+    dirLight.color.setHSL( 0.1, 1, 0.95 );
+    dirLight.position.set( - 1, 50, 1 );
+    dirLight.position.multiplyScalar( 30 );
+    scene.add( dirLight );
+
+    dirLight.castShadow = true;
+
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+
+    // window["light"] = light;
+    // window["lightHelper"] = lightHelper;
 
     let blocker = document.getElementById( 'blocker' );
     let instructions = document.getElementById( 'instructions' );
@@ -65,7 +79,7 @@ function init() {
 
     for ( let i = 0, l = position.count; i < l; i ++ ) {
 
-        color.setHSL( Math.random() * 0.3 + 0.5, 0.75, Math.random() * 0.25 + 0.75 );
+        color = new THREE.Color(0x6B8E23);
         colors.push( color.r, color.g, color.b );
 
     }
@@ -77,39 +91,13 @@ function init() {
     let floor = new THREE.Mesh( floorGeometry, floorMaterial );
     scene.add( floor );
 
-    // objects
+    // SkyBox
+    let sunlight = new THREE.HemisphereLight(
+        0xffffbb, 0x080820, 1
+    );
+    sunlight.position.set(0, 5, 0);
+    scene.add(sunlight);
 
-    // let boxGeometry = new THREE.BoxBufferGeometry( 20, 20, 20 );
-    // boxGeometry = boxGeometry.toNonIndexed(); // ensure each face has unique vertices
-
-    // position = boxGeometry.attributes.position;
-    // colors = [];
-
-    // for ( let i = 0, l = position.count; i < l; i ++ ) {
-
-    //     color.setHSL( Math.random() * 0.3 + 0.5, 0.75, Math.random() * 0.25 + 0.75 );
-    //     colors.push( color.r, color.g, color.b );
-
-    // }
-
-    // boxGeometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
-
-    // for ( let i = 0; i < 500; i ++ ) {
-
-    //     let boxMaterial = new THREE.MeshPhongMaterial( { specular: 0xffffff, flatShading: true, vertexColors: true } );
-    //     boxMaterial.color.setHSL( Math.random() * 0.2 + 0.5, 0.75, Math.random() * 0.25 + 0.75 );
-
-    //     let box = new THREE.Mesh( boxGeometry, boxMaterial );
-    //     box.position.x = Math.floor( Math.random() * 20 - 10 ) * 20;
-    //     box.position.y = Math.floor( Math.random() * 20 ) * 20 + 10;
-    //     box.position.z = Math.floor( Math.random() * 20 - 10 ) * 20;
-
-    //     scene.add( box );
-    //     objects.push( box );
-
-    // }
-
-    //
 
     renderer = new THREE.WebGLRenderer( { antialias: true } );
     renderer.setPixelRatio( window.devicePixelRatio );
@@ -118,7 +106,22 @@ function init() {
     document.body.appendChild( renderer.domElement );
     document.body.appendChild(VRButton.createButton(renderer));
 
-    //
+    // goat
+    let loader = new GLTFLoader().setPath("./src/models/goat/");
+    loader.load("scene.gltf", (gltf: GLTF) => {
+        
+        mixer = new THREE.AnimationMixer(gltf.scene);
+        let action = mixer.clipAction(gltf.animations[0]);
+        action.play();
+        gltf.scene.position.set(camera.position.x, 10, camera.position.z);
+        scene.add(gltf.scene);
+        window["gltf"] = gltf;
+
+    }, (event: any) => {
+        console.log(event);
+    }, (event: any) => {
+        console.log(event);
+    });
 
     window.addEventListener( 'resize', onWindowResize, false );
 
@@ -139,27 +142,27 @@ function animate() {
 
     // if ( controls.isLocked === true ) {
 
-        // raycaster.ray.origin.copy( controls.getObject().position );
-        // raycaster.ray.origin.y -= 10;
+    //     raycaster.ray.origin.copy( controls.getObject().position );
+    //     raycaster.ray.origin.y -= 10;
 
-        // let intersections = raycaster.intersectObjects( objects );
+    //     let intersections = raycaster.intersectObjects( objects );
 
         // let onObject = intersections.length > 0;
 
-        let time = performance.now();
-        let delta = ( time - prevTime ) / 1000;
+        // let time = performance.now();
+        // let delta = ( time - prevTime ) / 1000;
 
-        velocity.x -= velocity.x * 10.0 * delta;
-        velocity.z -= velocity.z * 10.0 * delta;
+        // velocity.x -= velocity.x * 10.0 * delta;
+        // velocity.z -= velocity.z * 10.0 * delta;
 
-        velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
+        // velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
 
-        direction.z = Number( moveForward ) - Number( moveBackward );
-        direction.x = Number( moveRight ) - Number( moveLeft );
-        direction.normalize(); // this ensures consistent movements in all directions
+        // direction.z = Number( moveForward ) - Number( moveBackward );
+        // direction.x = Number( moveRight ) - Number( moveLeft );
+        // direction.normalize(); // this ensures consistent movements in all directions
 
-        if ( moveForward || moveBackward ) velocity.z -= direction.z * 400.0 * delta;
-        if ( moveLeft || moveRight ) velocity.x -= direction.x * 400.0 * delta;
+        // if ( moveForward || moveBackward ) velocity.z -= direction.z * 400.0 * delta;
+        // if ( moveLeft || moveRight ) velocity.x -= direction.x * 400.0 * delta;
 
         // if ( onObject === true ) {
 
@@ -182,7 +185,7 @@ function animate() {
 
         // }
 
-        prevTime = time;
+        // prevTime = time;
 
     // }
 

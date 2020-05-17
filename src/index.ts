@@ -8,6 +8,7 @@ let camera: THREE.PerspectiveCamera;
 let scene: THREE.Scene;
 let renderer: THREE.WebGLRenderer;
 let mixer: AnimationMixer;
+let controls: OrbitControls;
 
 let moveForward = false;
 let moveBackward = false;
@@ -26,8 +27,11 @@ animate();
 
 function init() {
 
-    camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
-    camera.position.y = 10;
+    camera = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 1, 2000 );
+    // camera.position.set(1000, 10, 1500);
+    camera.position.y = -9;
+    camera.position.z = 0;
+    camera.zoom = 500;
 
     scene = new THREE.Scene();
     // scene.background = new THREE.Color( 0xffffff );
@@ -53,7 +57,7 @@ function init() {
 
     // floor
 
-    let floorGeometry = new THREE.PlaneBufferGeometry( 2000, 2000, 100, 100 );
+    let floorGeometry = new THREE.PlaneBufferGeometry( 20000, 20000, 100, 100 );
     floorGeometry.rotateX( - Math.PI / 2 );
 
     // vertex displacement
@@ -89,6 +93,8 @@ function init() {
     let floorMaterial = new THREE.MeshBasicMaterial( { vertexColors: true } );
 
     let floor = new THREE.Mesh( floorGeometry, floorMaterial );
+    floor.position.y = -10;
+    floor.receiveShadow = true;
     scene.add( floor );
 
     // SkyBox
@@ -106,6 +112,15 @@ function init() {
     document.body.appendChild( renderer.domElement );
     document.body.appendChild(VRButton.createButton(renderer));
 
+    // controls 
+    controls = new OrbitControls(camera, renderer.domElement);
+    // controls.enableDamping = true;
+    // controls.dampingFactor = 0.05;
+    // controls.screenSpacePanning = false;
+    controls.minDistance = 100;
+    controls.maxDistance = 500;
+    controls.maxPolarAngle = Math.PI * 0.5;
+
     // goat
     let loader = new GLTFLoader().setPath("./src/models/goat/");
     loader.load("scene.gltf", (gltf: GLTF) => {
@@ -113,7 +128,10 @@ function init() {
         mixer = new THREE.AnimationMixer(gltf.scene);
         let action = mixer.clipAction(gltf.animations[0]);
         action.play();
-        gltf.scene.position.set(camera.position.x, 10, camera.position.z);
+        console.log(camera.position);
+        // gltf.scene.position.set(camera.position.x, camera.position.y, camera.position.z);
+        gltf.scene.position.y = -8;
+        gltf.scene.position.z = -1;
         scene.add(gltf.scene);
         window["gltf"] = gltf;
 
@@ -139,6 +157,8 @@ function onWindowResize() {
 function animate() {
 
     requestAnimationFrame( animate );
+
+    controls.update();
 
     // if ( controls.isLocked === true ) {
 

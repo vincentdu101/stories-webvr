@@ -3,6 +3,7 @@ import { VRButton } from "three/examples/jsm/webxr/VRButton";
 import { GLTFLoader, GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { AnimationMixer, Group } from "three";
 import { OrbitControls} from "three/examples/jsm/controls/OrbitControls";
+import { OBJLoader} from "three/examples/jsm/loaders/OBJLoader";
 
 let camera: THREE.PerspectiveCamera;
 let scene: THREE.Scene;
@@ -10,12 +11,16 @@ let renderer: THREE.WebGLRenderer;
 let mixer: AnimationMixer;
 let controls: OrbitControls;
 let axes = new THREE.AxesHelper(500);
+let clock = new THREE.Clock();
+let log = new OBJLoader();
 
 let moveForward = false;
 let moveBackward = false;
 let moveLeft = false;
 let moveRight = false;
 let canJump = false;
+let speed = 2;
+let delta = 0;
 
 let prevTime = performance.now();
 let velocity = new THREE.Vector3();
@@ -28,6 +33,7 @@ animate();
 
 function init() {
 
+    // fov smaller means closer, bigger means farther view
     camera = new THREE.PerspectiveCamera( 7, window.innerWidth / window.innerHeight, 1, 1000 );
     // camera.position.set(1000, 10, 1500);
 
@@ -136,7 +142,7 @@ function init() {
         action.play();
         console.log(camera.position);
         // gltf.scene.position.set(camera.position.x, camera.position.y, camera.position.z);
-        gltf.scene.position.y = 1;
+        gltf.scene.position.y = 3.5;
         gltf.scene.position.z = 0;
         scene.add(gltf.scene);
         window["gltf"] = gltf;
@@ -145,6 +151,14 @@ function init() {
         console.log(event);
     }, (event: any) => {
         console.log(event);
+    });
+
+    // log
+    log.load("./src/models/log/low_poly_log.obj", (object) => {
+        object.position.y = 3;
+        object.position.z = 0;
+        object.scale.set(0.01, 0.01, 0.02);
+        scene.add(object);
     });
 
     window.addEventListener( 'resize', onWindowResize, false );
@@ -165,6 +179,9 @@ function animate() {
     requestAnimationFrame( animate );
 
     controls.update();
+
+    delta = clock.getDelta();
+    mixer.update(delta);
 
     // if ( controls.isLocked === true ) {
 

@@ -13,6 +13,9 @@ let controls: OrbitControls;
 let axes = new THREE.AxesHelper(500);
 let clock = new THREE.Clock();
 let log = new OBJLoader();
+let leftCanyon = new OBJLoader();
+let rightCanyon;
+let rightGoat;
 
 let moveForward = false;
 let moveBackward = false;
@@ -136,7 +139,6 @@ function init() {
     // goat
     let loader = new GLTFLoader().setPath("./src/models/goat/");
     loader.load("scene.gltf", (gltf: GLTF) => {
-        
         mixer = new THREE.AnimationMixer(gltf.scene);
         let action = mixer.clipAction(gltf.animations[0]);
         action.play();
@@ -146,7 +148,6 @@ function init() {
         gltf.scene.position.z = 0;
         scene.add(gltf.scene);
         window["gltf"] = gltf;
-
     }, (event: any) => {
         console.log(event);
     }, (event: any) => {
@@ -157,8 +158,20 @@ function init() {
     log.load("./src/models/log/low_poly_log.obj", (object) => {
         object.position.y = 3;
         object.position.z = 0;
-        object.scale.set(0.01, 0.01, 0.02);
+        object.scale.set(0.01, 0.01, 0.04);
         scene.add(object);
+    });
+
+    // canyon
+    leftCanyon.load("./src/models/mountain_canyon_01.obj", (object) => {
+        object.position.set(20, 1, -1);
+        object.rotateX(180);
+        window["canyon"] = object;
+        scene.add(object);
+
+        rightCanyon = object.clone();
+        rightCanyon.position.set(20, 1, 10);
+        scene.add(rightCanyon);
     });
 
     window.addEventListener( 'resize', onWindowResize, false );
@@ -181,7 +194,10 @@ function animate() {
     controls.update();
 
     delta = clock.getDelta();
-    mixer.update(delta);
+
+    if (mixer) {
+        mixer.update(delta);
+    }
 
     // if ( controls.isLocked === true ) {
 

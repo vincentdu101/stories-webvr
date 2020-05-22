@@ -9,6 +9,7 @@ let scene: THREE.Scene;
 let renderer: THREE.WebGLRenderer;
 let mixer: AnimationMixer;
 let controls: OrbitControls;
+let axes = new THREE.AxesHelper(500);
 
 let moveForward = false;
 let moveBackward = false;
@@ -27,16 +28,20 @@ animate();
 
 function init() {
 
-    camera = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 1, 2000 );
+    camera = new THREE.PerspectiveCamera( 7, window.innerWidth / window.innerHeight, 1, 1000 );
     // camera.position.set(1000, 10, 1500);
-    camera.position.y = -9;
+
+    camera.position.x = 15;
+    camera.position.y = 5;
     camera.position.z = 0;
-    camera.zoom = 500;
+    camera.zoom = 50;
+    window["camera"] = camera;
 
     scene = new THREE.Scene();
     // scene.background = new THREE.Color( 0xffffff );
     scene.background = new THREE.Color().setHSL( 0.6, 0, 1 );
     scene.fog = new THREE.Fog( 0xffffff, 0, 750 );
+    scene.add(axes);
 
     let dirLight = new THREE.DirectionalLight( 0xffffff, 1 );
     dirLight.color.setHSL( 0.1, 1, 0.95 );
@@ -93,7 +98,7 @@ function init() {
     let floorMaterial = new THREE.MeshBasicMaterial( { vertexColors: true } );
 
     let floor = new THREE.Mesh( floorGeometry, floorMaterial );
-    floor.position.y = -10;
+    floor.position.y = 0;
     floor.receiveShadow = true;
     scene.add( floor );
 
@@ -119,7 +124,8 @@ function init() {
     // controls.screenSpacePanning = false;
     controls.minDistance = 100;
     controls.maxDistance = 500;
-    controls.maxPolarAngle = Math.PI * 0.5;
+    // controls.maxPolarAngle = Math.PI * 0.5;
+    controls.enableZoom = false;
 
     // goat
     let loader = new GLTFLoader().setPath("./src/models/goat/");
@@ -130,8 +136,8 @@ function init() {
         action.play();
         console.log(camera.position);
         // gltf.scene.position.set(camera.position.x, camera.position.y, camera.position.z);
-        gltf.scene.position.y = -8;
-        gltf.scene.position.z = -1;
+        gltf.scene.position.y = 1;
+        gltf.scene.position.z = 0;
         scene.add(gltf.scene);
         window["gltf"] = gltf;
 

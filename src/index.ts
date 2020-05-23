@@ -12,10 +12,11 @@ let mixer: AnimationMixer;
 let controls: OrbitControls;
 let axes = new THREE.AxesHelper(500);
 let clock = new THREE.Clock();
-let log = new OBJLoader();
-let leftCanyon = new OBJLoader();
+let objLoader = new OBJLoader();
+let leftCanyon;
 let rightCanyon;
 let rightGoat;
+let log;
 
 let moveForward = false;
 let moveBackward = false;
@@ -43,7 +44,6 @@ function init() {
     camera.position.x = 15;
     camera.position.y = 5;
     camera.position.z = 0;
-    camera.zoom = 50;
     window["camera"] = camera;
 
     scene = new THREE.Scene();
@@ -142,12 +142,10 @@ function init() {
         mixer = new THREE.AnimationMixer(gltf.scene);
         let action = mixer.clipAction(gltf.animations[0]);
         action.play();
-        console.log(camera.position);
-        // gltf.scene.position.set(camera.position.x, camera.position.y, camera.position.z);
         gltf.scene.position.y = 3.5;
         gltf.scene.position.z = 0;
         scene.add(gltf.scene);
-        window["gltf"] = gltf;
+        rightGoat = gltf;
     }, (event: any) => {
         console.log(event);
     }, (event: any) => {
@@ -155,19 +153,21 @@ function init() {
     });
 
     // log
-    log.load("./src/models/log/low_poly_log.obj", (object) => {
+    objLoader.load("./src/models/log/low_poly_log.obj", (object) => {
         object.position.y = 3;
         object.position.z = 0;
         object.scale.set(0.01, 0.01, 0.04);
         scene.add(object);
+        log = object;
     });
 
     // canyon
-    leftCanyon.load("./src/models/mountain_canyon_01.obj", (object) => {
+    objLoader.load("./src/models/mountain_canyon_01.obj", (object) => {
         object.position.set(20, 1, -1);
         object.rotateX(180);
         window["canyon"] = object;
         scene.add(object);
+        leftCanyon = object;
 
         rightCanyon = object.clone();
         rightCanyon.position.set(20, 1, 10);
@@ -182,6 +182,11 @@ function onWindowResize() {
 
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
+
+    // rightGoat.scene.setSize(window.innerWidth, window.innerHeight);
+    // log.setSize(window.innerWidth, window.innerHeight);
+    // leftCanyon.setSize(window.innerWidth, window.innerHeight);
+    // rightCanyon.setSize(window.innerWidth, window.innerHeight);
 
     renderer.setSize( window.innerWidth, window.innerHeight );
 

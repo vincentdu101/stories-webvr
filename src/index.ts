@@ -17,6 +17,7 @@ let leftCanyon;
 let rightCanyon;
 let rightGoat;
 let log;
+let water;
 
 let moveForward = false;
 let moveBackward = false;
@@ -25,6 +26,7 @@ let moveRight = false;
 let canJump = false;
 let speed = 2;
 let delta = 0;
+let depthTarget, depthTarget2;
 
 let prevTime = performance.now();
 let velocity = new THREE.Vector3();
@@ -35,7 +37,134 @@ let color = new THREE.Color();
 init();
 animate();
 
+function createWaterMesh(): THREE.Mesh {
+    let vertShader = `
+        uniform float uTime;
+        varying vec2 vUV;
+        varying vec3 WorldPosition;
+
+        void main() {
+            vec3 pos = position;
+            pos.z += cos(pos.x * 5.0 + uTime) * 0.1 * sin(pos.y * 5.0 + uTime);
+            WorldPosition = pos;
+            vUV = uv;
+
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        }
+    
+    `;
+
+    let fragShader = `
+        #include <packing>
+        varying vec2 vUV;
+        varying vec3 WorldPosition;
+
+        uniform sampler2D uSurfaceTexture;
+        uniform sampler2D uDepthMap;
+        uniform sampler2D uDepthMap2;
+        uniform float uTime;
+        uniform float cameraNear;
+        uniform float cameraFar;
+        uniform vec4 uScreenSize;
+        uniform bool isMask;
+
+        float readDepth(sampler2D depthSampler, vec2 coord) {
+            float fragCoordZ = texture2D(depthSampler, coord).x;
+            float viewZ = perspectiveDepthToViewZ(fragCoordZ, cameraNear, cameraFar);
+            return viewZToOrthographicDepth(viewZ, cameraNear, cameraFar);
+        }
+
+        float getLinearDepth(vec3 pos) {
+            return -(viewMatrix * vec4(pos, 1.0)).z;
+        }
+
+        float getLinearScreenDepth(sampler2D map) {
+            vec2 uv = gl_FragCoord.xy * uScreenSize.zw;
+            return readDepth(map, uv);
+        }
+
+        void main() {
+            vec4 color = vec4(0.0, 0.7, 1.0, 0.5);
+
+            vec2 pos = vUV * 2.0;
+            pos.y -= uTime * 0.002;
+            vec4 WaterLines = texture2D(uSurfaceTexture, pos);
+            color.rgba += WaterLines.r * 0.1;
+
+            float worldDepth = getLinearScreenDepth(uDepthMap2);
+            float screenDepth = getLinearScreenDepth(uDepthMap);
+            float foamLine = clamp((screenDepth - worldDepth), 0.0, 1.0);
+
+            if (foamLine < 0.001) {
+                color.rgba += 0.2;
+            }
+
+            if (isMask) {
+                color = vec4(1.0);
+            }
+
+            gl_FragColor = color;
+        }
+    `;
+    
+    let waterLinesTexture = THREE.ImageUtils.loadTexture("./src/texture/WaterTexture.png");
+    waterLinesTexture.wrapS = THREE.RepeatWrapping;
+    waterLinesTexture.wrapT = THREE.RepeatWrapping;
+    
+    let uniforms = {
+        uTime: {value: 0.0},
+        uSurfaceTexture: {type: "t", value: waterLinesTexture},
+        cameraNear: {value: camera.near},
+        cameraFar: {value: camera.far},
+        uDepthMap: {value: depthTarget.depthTexture},
+        uDepthMap2: {value: depthTarget2.depthTexture},
+        isMask: {value: false},
+        uScreenSize: {value: new THREE.Vector4(
+            window.innerWidth, window.innerHeight, 1/window.innerWidth, 1/window.innerHeight
+        )}
+    };
+
+    let waterGeometry = new THREE.PlaneGeometry(50, 50, 50, 50);
+    let waterMaterial = new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        vertexShader: vertShader,
+        fragmentShader: fragShader,
+        transparent: true,
+        depthWrite: false
+    });
+
+    let waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
+    waterMesh.rotation.x = -Math.PI / 2;
+    waterMesh.position.y = 2;
+    waterMesh.material = waterMaterial;
+    return waterMesh;
+}
+
 function init() {
+
+    // set up depth buffer
+    depthTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+    depthTarget.texture.format = THREE.RGBAFormat;
+    depthTarget.texture.minFilter = THREE.NearestFilter;
+    depthTarget.texture.magFilter = THREE.NearestFilter;
+    depthTarget.texture.generateMipMaps = false;
+    depthTarget.stencilBuffer = false;
+    depthTarget.depthBuffer = true;
+    depthTarget.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight);
+    depthTarget.depthTexture.type = THREE.UnsignedShortType;
+
+    // used as hack to get the depth of the pixels at the water surface by redrawing the 
+    // scene with the water in the depth buffer
+    depthTarget2 = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+    depthTarget2.texture.format = THREE.RGBAFormat;
+    depthTarget2.texture.minFilter = THREE.NearestFilter;
+    depthTarget2.texture.magFilter = THREE.NearestFilter;
+    depthTarget2.texture.generateMipMaps = false;
+    depthTarget2.stencilBuffer = false;
+    depthTarget2.depthBuffer = true;
+    depthTarget2.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight);
+    depthTarget2.depthTexture.type = THREE.UnsignedShortType;    
+
 
     // fov smaller means closer, bigger means farther view
     camera = new THREE.PerspectiveCamera( 7, window.innerWidth / window.innerHeight, 1, 1000 );
@@ -152,6 +281,10 @@ function init() {
         console.log(event);
     });
 
+    // water
+    water = createWaterMesh();
+    scene.add(water);
+
     // log
     objLoader.load("./src/models/log/low_poly_log.obj", (object) => {
         object.position.y = 3;
@@ -189,6 +322,9 @@ function onWindowResize() {
     // rightCanyon.setSize(window.innerWidth, window.innerHeight);
 
     renderer.setSize( window.innerWidth, window.innerHeight );
+    water.uniforms.uScreenSize = new THREE.Vector4(
+        window.innerWidth, window.innerHeight, 1 / window.innerWidth, 1 / window.innerHeight
+    );
 
 }
 
@@ -202,6 +338,10 @@ function animate() {
 
     if (mixer) {
         mixer.update(delta);
+    }
+
+    if (water) {
+        water.material.uniforms.uTime.value += 0.1;
     }
 
     // if ( controls.isLocked === true ) {

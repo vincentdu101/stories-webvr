@@ -27,6 +27,7 @@ let canJump = false;
 let speed = 2;
 let delta = 0;
 let depthTarget, depthTarget2;
+let messageHeight: number = 200;
 
 let prevTime = performance.now();
 let velocity = new THREE.Vector3();
@@ -36,6 +37,28 @@ let color = new THREE.Color();
 
 init();
 animate();
+
+function getHeight() {
+    let height = window.innerHeight - messageHeight;
+    return height > 200 ? height : window.innerHeight / 2;
+}
+
+function getMessageHeight() {
+    if (window.innerHeight < messageHeight) {
+        return window.innerHeight / 2;
+    } else {
+        return messageHeight;
+    }
+}
+
+function setupMessageBox() {
+    let message = document.getElementById("message");
+    let title = document.createElement("h3");
+    let textContent = document.createTextNode("The Two Goats");
+    title.appendChild(textContent);
+    message.appendChild(title);
+    message.style.top = getHeight() + "px";
+}
 
 function createWaterMesh(): THREE.Mesh {
     let vertShader = `
@@ -120,7 +143,7 @@ function createWaterMesh(): THREE.Mesh {
         uDepthMap2: {value: depthTarget2.depthTexture},
         isMask: {value: false},
         uScreenSize: {value: new THREE.Vector4(
-            window.innerWidth, window.innerHeight, 1/window.innerWidth, 1/window.innerHeight
+            window.innerWidth, getHeight(), 1/window.innerWidth, 1/getHeight()
         )}
     };
 
@@ -142,36 +165,38 @@ function createWaterMesh(): THREE.Mesh {
 
 function init() {
 
+    setupMessageBox();
+
     // set up depth buffer
-    depthTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+    depthTarget = new THREE.WebGLRenderTarget(window.innerWidth, getHeight());
     depthTarget.texture.format = THREE.RGBAFormat;
     depthTarget.texture.minFilter = THREE.NearestFilter;
     depthTarget.texture.magFilter = THREE.NearestFilter;
     depthTarget.texture.generateMipMaps = false;
     depthTarget.stencilBuffer = false;
     depthTarget.depthBuffer = true;
-    depthTarget.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight);
+    depthTarget.depthTexture = new THREE.DepthTexture(window.innerWidth, getHeight());
     depthTarget.depthTexture.type = THREE.UnsignedShortType;
 
     // used as hack to get the depth of the pixels at the water surface by redrawing the 
     // scene with the water in the depth buffer
-    depthTarget2 = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+    depthTarget2 = new THREE.WebGLRenderTarget(window.innerWidth, getHeight());
     depthTarget2.texture.format = THREE.RGBAFormat;
     depthTarget2.texture.minFilter = THREE.NearestFilter;
     depthTarget2.texture.magFilter = THREE.NearestFilter;
     depthTarget2.texture.generateMipMaps = false;
     depthTarget2.stencilBuffer = false;
     depthTarget2.depthBuffer = true;
-    depthTarget2.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight);
+    depthTarget2.depthTexture = new THREE.DepthTexture(window.innerWidth, getHeight());
     depthTarget2.depthTexture.type = THREE.UnsignedShortType;    
 
 
     // fov smaller means closer, bigger means farther view
-    camera = new THREE.PerspectiveCamera( 7, window.innerWidth / window.innerHeight, 1, 1000 );
+    camera = new THREE.PerspectiveCamera( 7, window.innerWidth / getHeight(), 1, 1000 );
     // camera.position.set(1000, 10, 1500);
 
-    camera.position.x = 15;
-    camera.position.y = 5;
+    camera.position.x = 75;
+    camera.position.y = 50;
     camera.position.z = 0;
     window["camera"] = camera;
 
@@ -192,14 +217,7 @@ function init() {
     dirLight.shadow.mapSize.width = 2048;
     dirLight.shadow.mapSize.height = 2048;
 
-    // window["light"] = light;
-    // window["lightHelper"] = lightHelper;
-
-    let blocker = document.getElementById( 'blocker' );
-    let instructions = document.getElementById( 'instructions' );
-
     // floor
-
     let floorGeometry = new THREE.PlaneBufferGeometry( 20000, 20000, 100, 100 );
     floorGeometry.rotateX( - Math.PI / 2 );
 
@@ -250,7 +268,7 @@ function init() {
 
     renderer = new THREE.WebGLRenderer( { antialias: true } );
     renderer.setPixelRatio( window.devicePixelRatio );
-    renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.setSize( window.innerWidth, getHeight() );
     renderer.xr.enabled = true;
     document.body.appendChild( renderer.domElement );
     document.body.appendChild(VRButton.createButton(renderer));
@@ -260,8 +278,8 @@ function init() {
     // controls.enableDamping = true;
     // controls.dampingFactor = 0.05;
     // controls.screenSpacePanning = false;
-    controls.minDistance = 100;
-    controls.maxDistance = 500;
+    controls.minDistance = 50;
+    controls.maxDistance = 100;
     // controls.maxPolarAngle = Math.PI * 0.5;
     controls.enableZoom = false;
 
@@ -313,17 +331,17 @@ function init() {
 
 function onWindowResize() {
 
-    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.aspect = window.innerWidth / getHeight();
     camera.updateProjectionMatrix();
 
-    // rightGoat.scene.setSize(window.innerWidth, window.innerHeight);
-    // log.setSize(window.innerWidth, window.innerHeight);
-    // leftCanyon.setSize(window.innerWidth, window.innerHeight);
-    // rightCanyon.setSize(window.innerWidth, window.innerHeight);
+    // rightGoat.scene.setSize(window.innerWidth, getHeight());
+    // log.setSize(window.innerWidth, getHeight());
+    // leftCanyon.setSize(window.innerWidth, getHeight());
+    // rightCanyon.setSize(window.innerWidth, getHeight());
 
-    renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.setSize( window.innerWidth, getHeight() );
     water.uniforms.uScreenSize = new THREE.Vector4(
-        window.innerWidth, window.innerHeight, 1 / window.innerWidth, 1 / window.innerHeight
+        window.innerWidth, getHeight(), 1 / window.innerWidth, 1 / getHeight()
     );
 
 }

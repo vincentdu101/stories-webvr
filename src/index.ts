@@ -4,6 +4,7 @@ import { GLTFLoader, GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { AnimationMixer, Group } from "three";
 import { OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import { OBJLoader} from "three/examples/jsm/loaders/OBJLoader";
+import goats from "./data/twoGoats.js";
 
 let camera: THREE.PerspectiveCamera;
 let scene: THREE.Scene;
@@ -18,6 +19,7 @@ let rightCanyon;
 let rightGoat;
 let log;
 let water;
+let pageIndex = 0;
 
 let moveForward = false;
 let moveBackward = false;
@@ -58,6 +60,38 @@ function setupMessageBox() {
     title.appendChild(textContent);
     message.appendChild(title);
     message.style.top = getHeight() + "px";
+    message.style.height = getMessageHeight() + "px";
+    message.style.width = window.innerWidth + "px";
+}
+
+function addPages() {
+    let message = document.getElementById("message");
+    let page = document.createElement("div");
+    let currentPage = document.getElementById("page");
+    if (currentPage) {
+        message.removeChild(currentPage);
+    }
+    page.id = "page";
+    page.appendChild(document.createTextNode(goats.pages[pageIndex]));
+    message.appendChild(page);
+}
+
+function addButtons() {
+    let message = document.getElementById("message");
+    let previous = document.createElement("button");
+    let next = document.createElement("button");
+    previous.onclick = () => {
+        pageIndex = pageIndex === 0 ? 0 : pageIndex - 1;
+    };
+    next.onclick = () => {
+        pageIndex = pageIndex === 3 ? 3 : pageIndex + 1;
+    }
+    previous.id = "previous";
+    next.id = "next";
+    previous.innerText = "Previous";
+    next.innerText = "Next";
+    message.appendChild(previous);
+    message.appendChild(next);
 }
 
 function createWaterMesh(): THREE.Mesh {
@@ -166,6 +200,8 @@ function createWaterMesh(): THREE.Mesh {
 function init() {
 
     setupMessageBox();
+    addPages();
+    addButtons();
 
     // set up depth buffer
     depthTarget = new THREE.WebGLRenderTarget(window.innerWidth, getHeight());
@@ -353,6 +389,8 @@ function animate() {
     controls.update();
 
     delta = clock.getDelta();
+
+    addPages();
 
     if (mixer) {
         mixer.update(delta);

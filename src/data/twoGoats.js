@@ -1,4 +1,4 @@
-{
+export default {
     "title": "The Two Goats",
     "author": "Aesop",
     "pages": [

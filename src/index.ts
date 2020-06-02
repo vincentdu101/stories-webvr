@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { VRButton } from "three/examples/jsm/webxr/VRButton";
 import { GLTFLoader, GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { AnimationMixer, Group } from "three";
+import { AnimationMixer, AnimationAction } from "three";
 import { OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import { OBJLoader} from "three/examples/jsm/loaders/OBJLoader";
 import goats from "./data/twoGoats.js";
@@ -20,6 +20,8 @@ let rightGoat;
 let log;
 let water;
 let pageIndex = 0;
+let pageChanged = false;
+let goatTimeActions = [170, 170, 1300, 1260];
 
 let moveForward = false;
 let moveBackward = false;
@@ -36,6 +38,8 @@ let velocity = new THREE.Vector3();
 let direction = new THREE.Vector3();
 let vertex = new THREE.Vector3();
 let color = new THREE.Color();
+let goatAnimations;
+let action: AnimationAction;
 
 init();
 animate();
@@ -82,9 +86,11 @@ function addButtons() {
     let next = document.createElement("button");
     previous.onclick = () => {
         pageIndex = pageIndex === 0 ? 0 : pageIndex - 1;
+        pageChanged = true;
     };
     next.onclick = () => {
         pageIndex = pageIndex === 3 ? 3 : pageIndex + 1;
+        pageChanged = true;
     }
     previous.id = "previous";
     next.id = "next";
@@ -195,6 +201,14 @@ function createWaterMesh(): THREE.Mesh {
     waterMesh.position.y = 2;
     waterMesh.material = waterMaterial;
     return waterMesh;
+}
+
+function reloadAnimation(time: number) {
+    if (pageChanged) {
+        action.time = time;
+        action.play();
+        pageChanged = false;
+    }
 }
 
 function init() {
@@ -323,7 +337,8 @@ function init() {
     let loader = new GLTFLoader().setPath("./src/models/goat/");
     loader.load("scene.gltf", (gltf: GLTF) => {
         mixer = new THREE.AnimationMixer(gltf.scene);
-        let action = mixer.clipAction(gltf.animations[0]);
+        action = mixer.clipAction(gltf.animations[0]);
+        goatAnimations = gltf.animations[0];
         action.play();
         gltf.scene.position.y = 3.5;
         gltf.scene.position.z = 0;
@@ -392,7 +407,10 @@ function animate() {
 
     addPages();
 
-    if (mixer) {
+    if (mixer && goatAnimations) {
+        // mixer.time = goatTimeActions[pageIndex];
+        // action.play();
+        reloadAnimation(goatTimeActions[pageIndex]);
         mixer.update(delta);
     }
 

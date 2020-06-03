@@ -5,6 +5,7 @@ import { AnimationMixer, AnimationAction } from "three";
 import { OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import { OBJLoader} from "three/examples/jsm/loaders/OBJLoader";
 import goats from "./data/twoGoats.js";
+import Goat from "./components/objects/Goat";
 
 let camera: THREE.PerspectiveCamera;
 let scene: THREE.Scene;
@@ -15,8 +16,9 @@ let axes = new THREE.AxesHelper(500);
 let clock = new THREE.Clock();
 let objLoader = new OBJLoader();
 let leftCanyon;
+let leftGoat: Goat;
 let rightCanyon;
-let rightGoat;
+let rightGoat: Goat;
 let log;
 let water;
 let pageIndex = 0;
@@ -205,8 +207,8 @@ function createWaterMesh(): THREE.Mesh {
 
 function reloadAnimation(time: number) {
     if (pageChanged) {
-        action.time = time;
-        action.play();
+        rightGoat.playAnimationFromTime(time);
+        leftGoat.playAnimationFromTime(time);
         pageChanged = false;
     }
 }
@@ -336,14 +338,17 @@ function init() {
     // goat
     let loader = new GLTFLoader().setPath("./src/models/goat/");
     loader.load("scene.gltf", (gltf: GLTF) => {
-        mixer = new THREE.AnimationMixer(gltf.scene);
-        action = mixer.clipAction(gltf.animations[0]);
-        goatAnimations = gltf.animations[0];
-        action.play();
+        // mixer = new THREE.AnimationMixer(gltf.scene);
+        // action = mixer.clipAction(gltf.animations[0]);
+        // goatAnimations = gltf.animations[0];
+        // action.play();
         gltf.scene.position.y = 3.5;
         gltf.scene.position.z = 0;
-        scene.add(gltf.scene);
-        rightGoat = gltf;
+        rightGoat = new Goat(gltf);
+        gltf.scene.position.z = 3;
+        leftGoat = new Goat(gltf);
+        scene.add(rightGoat.getScene());
+        scene.add(leftGoat.getScene());
     }, (event: any) => {
         console.log(event);
     }, (event: any) => {
@@ -382,16 +387,17 @@ function init() {
 
 function onWindowResize() {
 
+    let page = document.getElementById("page");
+    page.style.width = window.innerWidth + "px";
+
+    let message = document.getElementById("message");
+    message.style.width = window.innerWidth + "px";
+
     camera.aspect = window.innerWidth / getHeight();
     camera.updateProjectionMatrix();
 
-    // rightGoat.scene.setSize(window.innerWidth, getHeight());
-    // log.setSize(window.innerWidth, getHeight());
-    // leftCanyon.setSize(window.innerWidth, getHeight());
-    // rightCanyon.setSize(window.innerWidth, getHeight());
-
     renderer.setSize( window.innerWidth, getHeight() );
-    water.uniforms.uScreenSize = new THREE.Vector4(
+    water.material.uniforms.uScreenSize.value = new THREE.Vector4(
         window.innerWidth, getHeight(), 1 / window.innerWidth, 1 / getHeight()
     );
 
@@ -407,11 +413,12 @@ function animate() {
 
     addPages();
 
-    if (mixer && goatAnimations) {
+    if (rightGoat && leftGoat) {
         // mixer.time = goatTimeActions[pageIndex];
         // action.play();
         reloadAnimation(goatTimeActions[pageIndex]);
-        mixer.update(delta);
+        rightGoat.updateMixer(delta);
+        leftGoat.updateMixer(delta);
     }
 
     if (water) {
